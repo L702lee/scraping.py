@@ -1,111 +1,60 @@
-from urllib.request import urlopen 
-import requests
-headers_std = {
-'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/46.0.2490.80 Safari/537.36',
-'Content-Type': 'text/html',
-}
-asins_df = pd.read_csv('ASINs.csv')
-# print(asins_df.head())
-asin_list = asins_df['ASIN']
-# print(asin_list)
-image_list_span_class = 'a-button-text' #span containing the img tag
-brand_name_class = 'bylineInfo'  #can get link of brand and name of brand from the a-link
-product_name_class = 'productTitle' #span
-rating_class = 'a-icon-alt'  #span
-no_of_rat_class = 'acrCustomerReviewText' #span
-# actual_price_class = 'priceBlockStrikePriceString'   # this discounted price is not presernt for all
-sell_price_id = 'priceblock_saleprice'
-sell_price_range_id = 'priceblock_ourprice'
 
-# blank lists for storing the final data to be stored in the csv file
-product_names = []
-brand_names = []
-ratings = []
-no_of_ratings = []
-product_images = []
-product_prices = []
+import selenium
+from selenium import webdriver as wb
+from selenium.webdriver.support.ui import Select
+import pandas as pd
+import time
+wbD=wb.Chrome('chromedriver.exe')
+wbD.get('https://www.amazon.in/s?k=bags&crid=2M096C61O4MLT&qid=1653308124&sprefix=ba%2Caps%2C283&ref=sr_pg_1')
+listOflinks =[]
+condition =True
+while condition:
+    time.sleep(3)
+    productInfoList=wbD.find_elements_by_class_name('a-size-mini')
+    for el in productInfoList:
+        if(el.text !="" and el.text !="Sponsored"):
+            pp2=el.find_element_by_tag_name('a')
+            listOflinks.append(pp2.get_property('href'))
+    try:
+        wbD.find_element_by_class_name('a-last').find_element_by_tag_name('a').get_property('href')
+        wbD.find_element_by_class_name('a-last').click()
+    except:
+        condition=False
+len(listOflinks)`
+from tqdm import tqdm
+alldetails=[]
+brand=""
+model=""
 
-for asin in asin_list:
-	url = "https://www.amazon.in/dp/" + str(asin)
-	html = requests.get(url,headers=headers_std).text
-	product_name = soup.find_all('span',{'id':product_name_class})
-	rating = soup.find_all('span',{'class':rating_class})
-	no_of_rat = soup.find_all('span',{'id':no_of_rat_class})
-	actual_price = soup.find_all('span',{'class':actual_price_class})
-	selling_price = soup.find_all('span',{'id':sell_price_id})
-	# actual_price = soup.find_all('span',{'class':actual_price_class})
-	# selling_price = soup.find_all('span',{'id':sell_price_id})
-	sell_price_range = soup.find('span',{'id':sell_price_range_id})
-
-	image_urls = []
-
-	for image in image_list:
-		try:
-			image_url = image.find('img').get('src')
-			print(image_url)
-			# print(image_url)
-			image_urls.append(image_url)
-		except:
-			# print('NoneType Object in soup')
-			pass
-
-	product_images.append(str(image_urls))
-
-	# will use assert statements here later instead of print and along with error statement, will append a blank string
-	try:
-		print(brand_name[0].text.strip())			# for some products brand_name is not present so try except is useful here
-		# for some products brand_name is not present so try except is useful here
-		# print(brand_name[0].text.strip())			
-		brand_names.append(brand_name[0].text.strip())
-	except:
-		# print('brand_name problem')
-		brand_names.append('')
-
-
-	try:
-		# print(product_name[0].text.strip())
-		product_names.append(product_name[0].text.strip())
-	except:
-		# print('product name problem')
-		product_names.append('')
-
-	try:
-		# print(rating[0].text.strip())
-		ratings.append(rating[0].text.strip())
-	except:
-		print('brand_name problem')
-		# print('problem in product\'s rating')
-		ratings.append('')
-
-	print(product_name[0].text.strip())
-	print(rating[0].text.strip())
-	print(no_of_rat[0].text.strip())
-	try:
-		# print(no_of_rat[0].text.strip())
-		no_of_ratings.append(no_of_rat[0].text.strip())
-	except:
-		no_of_ratings.append('')
-		# print('problem in no.of ratings')
-
-	try:
-		print(sell_price_range.text.strip())
-
-		# print(sell_price_range.text.strip())
-		product_prices.append(sell_price_range.text.strip())
-	except:
-		print(url)
-		print('Problem here')
-		# print(url)
-		# print('Problem here')
-		product_prices.append('')
-
-# print(len(product_images))
-# print(len(brand_names))
-# print(len(product_prices))
-# print(len(product_images))
-# print(len(ratings))
-# print(len(no_of_ratings))
-
-# make a dataframe for csv
-df = pd.DataFrame({'product_name':product_names,'brand_name':brand_names,'images':product_images,'price':product_prices,'product_rating':ratings,'no. of ratings':no_of_ratings})
-df.to_csv('ASIN_product_details.csv',index=False)
+for i in tqdm(listOflinks):
+    wbD.get(i)
+    time.sleep(3)
+    sku = wbD.find_element_by_xpath('//*[@id="productTitle"]').text
+    category= wbD.find_element_by_xpath('//*[@id="wayfinding-breadcrumbs_feature_div"]/ul/li[7]/span/a').text
+    try:
+        try:
+            price = wbD.find_element_by_xpath('//*[@id="priceblock_ourprice"]').text
+        except:
+            price = wbD.find_element_by_xpath('//*[@id="priceblock_dealprice"]').text
+    except:
+        price=""
+        
+    pp=wbD.find_element_by_class_name('pdTab')
+    pp1=pp.find_elements_by_tag_name('tr')
+    for el in range(len(pp1)-1):
+        if (pp1[el].find_element_by_class_name("label").text) == 'Brand':
+            brand= pp1[el].find_element_by_class_name("value").text
+        if (pp1[el].find_element_by_class_name("label").text) == 'Model':
+            model= pp1[el].find_element_by_class_name("value").text
+        
+    temp ={
+        'SKU':sku,
+        'Category':category,
+        'Price':price,
+        'Brand':brand,
+        'Model':model,
+        'linkofproduct':i}
+    alldetails.append(temp)
+pd.DataFrame(alldetails)
+data = pd.DataFrame(alldetails)
+data.to_csv('Amazon_tv.csv')
